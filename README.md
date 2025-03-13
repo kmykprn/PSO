@@ -40,7 +40,7 @@ Global Best Value: 1.9924028516587042e-05
     - objective_function.pyの中に、目的関数を記載します。
 - main.pyの修正
     - `from objective_function import ...`部分に、目的関数を記載します。
-    - `pso = PSO(objective_function=...,'部分に、importした目的関数を設定します。
+    - `pso = PSO(objective_function=...,`部分に、importした目的関数を設定します。
 
 
 ## 参考にさせて頂いたサイト
