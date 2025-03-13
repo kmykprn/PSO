@@ -1,6 +1,8 @@
+import inspect
 import numpy as np
 import matplotlib.pyplot as plt
-from objective_function import objective_function
+from objective_function import objective_function, sphere_objective_function
+
 
 
 class PSO:
@@ -13,44 +15,50 @@ class PSO:
         max_iter (int)               : ループ回数
         position_range (float)       : 粒子の初期位置の範囲
         velocity_range (float)       : 粒子の初速度の範囲
+        dimension (int)              : 入力の次元数
         weight (float)               : 慣性係数（w）
         c1 (float)                   : pbest の影響度
         c2 (float)                   : gbest の影響度
     """
 
     def __init__(self, objective_function, num_particles=100, max_iter=1000,
-                 position_range=3, velocity_range=0.1, weight=0.1, c1=0.01, c2=0.01):
+                 position_range=3, velocity_range=0.1, dimension=2, weight=0.1, c1=0.01, c2=0.01):
 
         self.objective_function = objective_function
         self.num_particles = num_particles
         self.max_iter = max_iter
         self.position_range = position_range
         self.velocity_range = velocity_range
+        self.dimension = dimension
         self.weight = weight
         self.c1 = c1
         self.c2 = c2
 
+        # `objective_function` の引数の数をチェック
+        num_params = len(inspect.signature(objective_function).parameters)
+        if num_params != dimension:
+            raise ValueError(f"エラー：目的関数の引数の数は {num_params} ですが、入力の次元数は{self.dimension}です")
 
     def initialize_particle(self):
         """
         粒子の初期位置・速度を設定し、初期のpbestとgbestを決定する。
 
         Returns:
-            positions (np.ndarray)      : 各粒子の初期位置 (2, num_particles)
-            velocities (np.ndarray)     : 各粒子の初速度 (2, num_particles)
-            pbest_positions (np.ndarray): 各粒子の個体最良位置 (2, num_particles)
+            positions (np.ndarray)      : 各粒子の初期位置 (dimension, num_particles)
+            velocities (np.ndarray)     : 各粒子の初速度 (dimension, num_particles)
+            pbest_positions (np.ndarray): 各粒子の個体最良位置 (dimension, num_particles)
             pbest_ratings (np.ndarray)  : 各粒子の個体最良評価値 (num_particles,)
-            gbest_position (np.ndarray) : 全体で最良の粒子位置 (2,)
+            gbest_position (np.ndarray) : 全体で最良の粒子位置 (dimension,)
             gbest_rating (float)        : 全体で最良の評価値
         """
 
         # 粒子の初期位置と速度をランダムに設定
-        positions = np.random.uniform(-self.position_range, self.position_range, (2, self.num_particles))
-        velocities = np.random.uniform(-self.velocity_range, self.velocity_range, (2, self.num_particles))
+        positions = np.random.uniform(-self.position_range, self.position_range, (self.dimension, self.num_particles))
+        velocities = np.random.uniform(-self.velocity_range, self.velocity_range, (self.dimension, self.num_particles))
 
         # pbestの初期化
-        pbest_positions = positions
-        pbest_ratings = self.objective_function(X=positions[0], Y=positions[1])
+        pbest_positions = np.copy(positions)
+        pbest_ratings = self.objective_function(*positions)
 
         # gbestの初期化
         idx = np.argmin(pbest_ratings)
@@ -76,27 +84,28 @@ class PSO:
             if t == 0:
                 positions, velocities, pbest_positions, pbest_ratings, gbest_position, gbest_rating = self.initialize_particle()
 
-            # 1行self.num_particles列のランダム数のリストを一括生成
-            r1 = np.random.rand(1, self.num_particles)
-            r2 = np.random.rand(1, self.num_particles)
+            # self.dimension*self.num_particles のランダム数のリストを一括生成
+            r1 = np.random.rand(self.dimension, self.num_particles)
+            r2 = np.random.rand(self.dimension, self.num_particles)
             
             # 速度の更新（ベクトルで一括計算）
             velocities = (
                 self.weight * velocities +
                 self.c1 * r1 * (pbest_positions - positions) +
-                self.c2 * r2 * (gbest_position.reshape(2, 1) - positions)
+                self.c2 * r2 * (gbest_position.reshape(self.dimension, 1) - positions)
             )
             
             # 位置の更新（ベクトルで一括計算）
             positions += velocities
 
             # 各粒子の新しい評価値を一括計算
-            new_ratings = self.objective_function(positions[0],positions[1])
+            new_ratings = self.objective_function(*positions)
 
             # pbestの更新（新しい評価値が良い場合のみ）
             update_filter = new_ratings < pbest_ratings
-            pbest_positions[:, update_filter] = positions[:, update_filter]
-            pbest_ratings[update_filter] = new_ratings[update_filter]
+            if np.any(update_filter):
+                pbest_positions[:, update_filter] = positions[:, update_filter]
+                pbest_ratings[update_filter] = new_ratings[update_filter]
 
             # gbestの更新（新しい評価値が良い場合のみ）
             idx = np.argmin(pbest_ratings)
@@ -105,26 +114,28 @@ class PSO:
                 gbest_rating = pbest_ratings[idx]
 
              # 現在のイテレーションとgbestの評価値を保存
-            result[:,t] = np.array([t,gbest_rating])
+            result[:,t] = [t,gbest_rating]
 
         return result, gbest_position, gbest_rating
 
 
 if __name__ == '__main__':
     # 粒子群最適化（PSO）の初期設定
-    NUM_PARTICLES = 100     # 粒子数
-    MAX_ITER = 1000         # ループ回数
-    POSITION_RANGE = 3      # 探索範囲の上限（-SEARCH_RANGE ~ SEARCH_RANGE）
-    VELOCITY_RANGE = 0.1    # 初速度の範囲（-VELOCITY_RANGE ~ VELOCITY_RANGE）
+    NUM_PARTICLES = 100
+    MAX_ITER = 1000
+    POSITION_RANGE = 3
+    VELOCITY_RANGE = 0.1
+    DIMENSION = 3
     WEIGHT = 0.1
     C1 = 0.01
     C2 = 0.01
 
-    pso = PSO(objective_function=objective_function,
+    pso = PSO(objective_function=sphere_objective_function,
               num_particles=NUM_PARTICLES,
               max_iter=MAX_ITER,
               position_range=POSITION_RANGE,
               velocity_range=VELOCITY_RANGE,
+              dimension=DIMENSION,
               weight=WEIGHT,
               c1=C1,
               c2=C2
@@ -135,9 +146,10 @@ if __name__ == '__main__':
     print("Global Best Position:",  gbest_position)
     print("Global Best Value:", gbest_rating)
 
-    # 結果を描画
-    plt.plot(result[0,:],result[1,:])
-    plt.xlabel("Iteration")
-    plt.ylabel("Best Objective Value")
-    plt.title("PSO Optimization Progress")
-    plt.show()
+    # 次元が2のときのみプロット（3次元以上は可視化できない）
+    if DIMENSION == 2:
+        plt.plot(result[0,:],result[1,:])
+        plt.xlabel("Iteration")
+        plt.ylabel("Best Objective Value")
+        plt.title("PSO Optimization Progress")
+        plt.show()
