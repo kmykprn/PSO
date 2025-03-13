@@ -76,22 +76,27 @@ class PSO:
             if t == 0:
                 positions, velocities, pbest_positions, pbest_ratings, gbest_position, gbest_rating = self.initialize_particle()
 
-            # 個々の粒子ごとに更新
-            for k in range(self.num_particles):
+            # 1行self.num_particles列のランダム数のリストを一括生成
+            r1 = np.random.rand(1, self.num_particles)
+            r2 = np.random.rand(1, self.num_particles)
+            
+            # 速度の更新（ベクトルで一括計算）
+            velocities = (
+                self.weight * velocities +
+                self.c1 * r1 * (pbest_positions - positions) +
+                self.c2 * r2 * (gbest_position.reshape(2, 1) - positions)
+            )
+            
+            # 位置の更新（ベクトルで一括計算）
+            positions += velocities
 
-                # 速度の更新
-                r1 = np.random.rand()
-                r2 = np.random.rand()
-                velocities[:,k] = self.weight*velocities[:,k] + self.c1*r1*(pbest_positions[:,k]-positions[:,k]) + self.c2*r2*(gbest_position-positions[:,k])
+            # 各粒子の新しい評価値を一括計算
+            new_ratings = self.objective_function(positions[0],positions[1])
 
-                # 位置の更新
-                positions[:,k] = positions[:,k] + velocities[:,k]
-
-                # pbestの更新（新しい評価値が良い場合のみ）
-                new_rating = self.objective_function(positions[0,k],positions[1,k])
-                if new_rating < pbest_ratings[k]:
-                    pbest_positions[:,k] = positions[:,k]
-                    pbest_ratings[k] = new_rating
+            # pbestの更新（新しい評価値が良い場合のみ）
+            update_filter = new_ratings < pbest_ratings
+            pbest_positions[:, update_filter] = positions[:, update_filter]
+            pbest_ratings[update_filter] = new_ratings[update_filter]
 
             # gbestの更新（新しい評価値が良い場合のみ）
             idx = np.argmin(pbest_ratings)
