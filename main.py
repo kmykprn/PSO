@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from objective_function import objective_function, sphere_objective_function
 
 
-
 class PSO:
     """
     粒子群最適化 (PSO) を実装するクラス。
