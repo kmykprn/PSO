@@ -1,6 +1,7 @@
 ## はじめに
-- このプロジェクトでは、Particle Swarm Optimizationの実装を行ないました。
-- 3次元以上の入力にも対応しました。
+- Particle Swarm Optimization(PSO)の実装。
+- PSOは、（組み合わせ）最適化問題を解決するためのアルゴリズムの一つ
+- 3次元以上の入力にも対応。
 
 ## 前提条件
 [poetry](https://python-poetry.org/docs/)のインストールが必要です。
