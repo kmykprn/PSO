@@ -1,6 +1,6 @@
 ## はじめに
 - このプロジェクトでは、Particle Swarm Optimizationの実装を行ないました。
-- [こちらのサイト](https://qiita.com/opticont/items/04a5b4ff41483966987f)をもとに、3次元以上の入力にも対応しました。
+- 3次元以上の入力にも対応しました。
 
 ## 前提条件
 [poetry](https://python-poetry.org/docs/)のインストールが必要です。
